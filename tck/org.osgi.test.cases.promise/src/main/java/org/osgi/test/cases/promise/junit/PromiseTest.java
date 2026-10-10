@@ -18,14 +18,14 @@
 
 package org.osgi.test.cases.promise.junit;
 
+import static java.lang.Integer.valueOf;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.assertj.core.api.Assertions.fail;
 import static org.osgi.test.assertj.promise.PromiseAssert.assertThat;
 
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -50,20 +50,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import org.assertj.core.api.Assertions;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.assertj.core.api.ListAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.osgi.test.support.mock.MockFactory;
 import org.osgi.util.function.Consumer;
 import org.osgi.util.promise.Deferred;
 import org.osgi.util.promise.FailedPromisesException;
 import org.osgi.util.promise.Failure;
 import org.osgi.util.promise.Promise;
-import org.osgi.util.promise.PromiseFactory;
 import org.osgi.util.promise.PromiseFactory.Option;
+import org.osgi.util.promise.PromiseFactory;
 import org.osgi.util.promise.Promises;
 import org.osgi.util.promise.Success;
 import org.osgi.util.promise.TimeoutException;
@@ -208,7 +208,7 @@ public class PromiseTest {
 		assertThat(p2).isDone();
 		assertThat(p).hasSameValue(value);
 		assertThat(p2).isSuccessful();
-		assertThat(Integer.valueOf(result.get())).isSameAs(value);
+		Assertions.assertThat(valueOf(result.get())).isEqualTo(value);
 	}
 
 	@Test
@@ -402,7 +402,7 @@ public class PromiseTest {
 		assertThat(p1).resolvesWithin(WAIT_TIME, TimeUnit.SECONDS);
 
 		Promise<Integer> p2 = p1.then(promise -> factory
-				.resolved(Integer.valueOf(promise.getValue())));
+				.resolved(valueOf(promise.getValue())));
 		assertThat(p2).resolvesWithin(WAIT_TIME, TimeUnit.SECONDS)
 				.hasValue(Integer.valueOf(10));
 	}
@@ -422,7 +422,7 @@ public class PromiseTest {
 			scheduledExecutor.schedule(() -> {
 				try {
 					latch2.await();
-					n.resolve(Integer.valueOf(promise.getValue().toString()));
+					n.resolve(valueOf(promise.getValue().toString()));
 				} catch (Exception e) {
 					n.fail(e);
 				}
@@ -554,13 +554,13 @@ public class PromiseTest {
 	public void testNullCallback() throws Exception {
 		Deferred<String> d = factory.deferred();
 		Promise<String> p = d.getPromise();
-		assertThatNullPointerException().isThrownBy(() -> p.onResolve(null));
+		assertThatThrownBy(() -> p.onResolve(null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
 	public void testFailNull() throws Exception {
 		Deferred<String> d = factory.deferred();
-		assertThatNullPointerException().isThrownBy(() -> d.fail(null));
+		assertThatThrownBy(() -> d.fail(null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -581,9 +581,8 @@ public class PromiseTest {
 		assertThat(p).resolvesWithin(WAIT_TIME, TimeUnit.SECONDS)
 				.hasValue("first");
 		assertThat(fail).isFalse();
-		assertThatIllegalStateException().isThrownBy(() -> d.resolve("second"));
-		assertThatIllegalStateException()
-				.isThrownBy(() -> d.fail(new Exception("second")));
+		assertThatThrownBy(() -> d.resolve("second")).isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> d.fail(new Exception("second"))).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
@@ -608,9 +607,8 @@ public class PromiseTest {
 				.isInstanceOf(InvocationTargetException.class)
 				.hasCause(new Exception("first"));
 		assertThat(fail).isFalse();
-		assertThatIllegalStateException()
-				.isThrownBy(() -> d.fail(new Exception("second")));
-		assertThatIllegalStateException().isThrownBy(() -> d.resolve("second"));
+		assertThatThrownBy(() -> d.fail(new Exception("second"))).isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> d.resolve("second")).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
@@ -696,7 +694,7 @@ public class PromiseTest {
 				.isSameAs(failure);
 		assertThat(catchThrowableOfType(() -> p.getValue(),
 				InvocationTargetException.class).getCause()).isSameAs(failure);
-		assertThatNullPointerException().isThrownBy(() -> factory.failed(null));
+		assertThatThrownBy(() -> factory.failed(null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -709,8 +707,7 @@ public class PromiseTest {
 				.isSameAs(failure);
 		assertThat(catchThrowableOfType(() -> p.getValue(),
 				InvocationTargetException.class).getCause()).isSameAs(failure);
-		assertThatNullPointerException()
-				.isThrownBy(() -> Promises.failed(null));
+		assertThatThrownBy(() -> Promises.failed(null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -967,10 +964,8 @@ public class PromiseTest {
 
 	@Test
 	public void testAllNull() throws Exception {
-		assertThatNullPointerException()
-				.isThrownBy(() -> Promises.all((Promise< ? >[]) null));
-		assertThatNullPointerException().isThrownBy(
-				() -> factory.all((Collection<Promise<Object>>) null));
+		assertThatThrownBy(() -> Promises.all((Promise<?>[]) null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> factory.all((Collection<Promise<Object>>) null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -1305,19 +1300,15 @@ public class PromiseTest {
 
 	@Test
 	public void factory_resolved_with_null() throws Exception {
-		assertThatNullPointerException()
-				.isThrownBy(() -> factory.resolvedWith((Promise< ? >) null));
-		assertThatNullPointerException().isThrownBy(
-				() -> factory.resolvedWith((CompletionStage< ? >) null));
+		assertThatThrownBy(() -> factory.resolvedWith((Promise<?>) null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> factory.resolvedWith((CompletionStage<?>) null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
 	public void testResolveWithNull() throws Exception {
 		Deferred<String> d = factory.deferred();
-		assertThatNullPointerException()
-				.isThrownBy(() -> d.resolveWith((Promise<String>) null));
-		assertThatNullPointerException().isThrownBy(
-				() -> d.resolveWith((CompletionStage<String>) null));
+		assertThatThrownBy(() -> d.resolveWith((Promise<String>) null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> d.resolveWith((CompletionStage<String>) null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -1391,11 +1382,11 @@ public class PromiseTest {
 	public void testFilterNull() throws Exception {
 		String value1 = new String("value");
 		Promise<String> p1 = factory.resolved(value1);
-		assertThatNullPointerException().isThrownBy(() -> p1.filter(null));
+		assertThatThrownBy(() -> p1.filter(null)).isInstanceOf(NullPointerException.class);
 
 		Error failure2 = new Error("fail2");
 		Promise<String> p2 = factory.failed(failure2);
-		assertThatNullPointerException().isThrownBy(() -> p2.filter(null));
+		assertThatThrownBy(() -> p2.filter(null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -1432,11 +1423,11 @@ public class PromiseTest {
 	public void testMapNull() throws Exception {
 		String value1 = new String("value");
 		Promise<String> p1 = factory.resolved(value1);
-		assertThatNullPointerException().isThrownBy(() -> p1.map(null));
+		assertThatThrownBy(() -> p1.map(null)).isInstanceOf(NullPointerException.class);
 
 		Error failure2 = new Error("fail2");
 		Promise<String> p2 = factory.failed(failure2);
-		assertThatNullPointerException().isThrownBy(() -> p2.map(null));
+		assertThatThrownBy(() -> p2.map(null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -1474,11 +1465,11 @@ public class PromiseTest {
 	public void testFlatMapNull() throws Exception {
 		String value1 = new String("value");
 		Promise<String> p1 = factory.resolved(value1);
-		assertThatNullPointerException().isThrownBy(() -> p1.flatMap(null));
+		assertThatThrownBy(() -> p1.flatMap(null)).isInstanceOf(NullPointerException.class);
 
 		Error failure2 = new Error("fail2");
 		Promise<String> p2 = factory.failed(failure2);
-		assertThatNullPointerException().isThrownBy(() -> p2.flatMap(null));
+		assertThatThrownBy(() -> p2.flatMap(null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -1588,19 +1579,15 @@ public class PromiseTest {
 	public void testRecoverNull() throws Exception {
 		String value1 = new String("value");
 		Promise<String> p1 = factory.resolved(value1);
-		assertThatNullPointerException().isThrownBy(() -> p1.recover(null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.recover(p -> "recovered", null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.recover(null, TimeoutException.class));
+		assertThatThrownBy(() -> p1.recover(null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p1.recover(p -> "recovered", null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p1.recover(null, TimeoutException.class)).isInstanceOf(NullPointerException.class);
 
 		Error failure2 = new Error("fail2");
 		Promise<String> p2 = factory.failed(failure2);
-		assertThatNullPointerException().isThrownBy(() -> p2.recover(null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p2.recover(p -> "recovered", null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p2.recover(null, TimeoutException.class));
+		assertThatThrownBy(() -> p2.recover(null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p2.recover(p -> "recovered", null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p2.recover(null, TimeoutException.class)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -1710,19 +1697,15 @@ public class PromiseTest {
 	public void testRecoverWithNull() throws Exception {
 		String value1 = new String("value");
 		Promise<String> p1 = factory.resolved(value1);
-		assertThatNullPointerException().isThrownBy(() -> p1.recoverWith(null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.recoverWith(p -> p1, null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.recoverWith(null, TimeoutException.class));
+		assertThatThrownBy(() -> p1.recoverWith(null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p1.recoverWith(p -> p1, null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p1.recoverWith(null, TimeoutException.class)).isInstanceOf(NullPointerException.class);
 
 		Error failure2 = new Error("fail2");
 		Promise<String> p2 = factory.failed(failure2);
-		assertThatNullPointerException().isThrownBy(() -> p2.recoverWith(null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p2.recoverWith(p -> p1, null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p2.recoverWith(null, TimeoutException.class));
+		assertThatThrownBy(() -> p2.recoverWith(null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p2.recoverWith(p -> p1, null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p2.recoverWith(null, TimeoutException.class)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -1808,19 +1791,15 @@ public class PromiseTest {
 	public void testFallbackToNull() throws Exception {
 		String value1 = new String("value");
 		Promise<String> p1 = factory.resolved(value1);
-		assertThatNullPointerException().isThrownBy(() -> p1.fallbackTo(null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.fallbackTo(p1, null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.fallbackTo(null, TimeoutException.class));
+		assertThatThrownBy(() -> p1.fallbackTo(null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p1.fallbackTo(p1, null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p1.fallbackTo(null, TimeoutException.class)).isInstanceOf(NullPointerException.class);
 
 		Error failure2 = new Error("fail2");
 		Promise<String> p2 = factory.failed(failure2);
-		assertThatNullPointerException().isThrownBy(() -> p2.fallbackTo(null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p2.fallbackTo(p1, null));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p2.fallbackTo(null, TimeoutException.class));
+		assertThatThrownBy(() -> p2.fallbackTo(null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p2.fallbackTo(p1, null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p2.fallbackTo(null, TimeoutException.class)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -1854,13 +1833,12 @@ public class PromiseTest {
 				.resolvesWithin(WAIT_TIME, TimeUnit.SECONDS)
 				.hasFailedWithThrowableThat()
 				.isInstanceOf(IllegalStateException.class);
-		assertThatIllegalStateException().isThrownBy(() -> d.resolve("second"));
+		assertThatThrownBy(() -> d.resolve("second")).isInstanceOf(IllegalStateException.class);
 		assertThat(d.resolveWith(factory.failed(new Exception("second"))))
 				.resolvesWithin(WAIT_TIME, TimeUnit.SECONDS)
 				.hasFailedWithThrowableThat()
 				.isInstanceOf(IllegalStateException.class);
-		assertThatIllegalStateException()
-				.isThrownBy(() -> d.fail(new Exception("second")));
+		assertThatThrownBy(() -> d.fail(new Exception("second"))).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
@@ -1897,13 +1875,12 @@ public class PromiseTest {
 				.resolvesWithin(WAIT_TIME, TimeUnit.SECONDS)
 				.hasFailedWithThrowableThat()
 				.isInstanceOf(IllegalStateException.class);
-		assertThatIllegalStateException()
-				.isThrownBy(() -> d.fail(new Exception("second")));
+		assertThatThrownBy(() -> d.fail(new Exception("second"))).isInstanceOf(IllegalStateException.class);
 		assertThat(d.resolveWith(factory.resolved("second")))
 				.resolvesWithin(WAIT_TIME, TimeUnit.SECONDS)
 				.hasFailedWithThrowableThat()
 				.isInstanceOf(IllegalStateException.class);
-		assertThatIllegalStateException().isThrownBy(() -> d.resolve("second"));
+		assertThatThrownBy(() -> d.resolve("second")).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
@@ -2210,13 +2187,11 @@ public class PromiseTest {
 	public void testThenAcceptNull() throws Exception {
 		String value1 = new String("value");
 		Promise<String> p1 = factory.resolved(value1);
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.thenAccept((Consumer<String>) null));
+		assertThatThrownBy(() -> p1.thenAccept((Consumer<String>) null)).isInstanceOf(NullPointerException.class);
 
 		Error failure2 = new Error("fail2");
 		Promise<String> p2 = factory.failed(failure2);
-		assertThatNullPointerException()
-				.isThrownBy(() -> p2.thenAccept((Consumer<String>) null));
+		assertThatThrownBy(() -> p2.thenAccept((Consumer<String>) null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -2260,12 +2235,12 @@ public class PromiseTest {
 				.onFailure(t -> latchType.countDown(), TimeoutException.class)
 				.onFailure(t -> latchAll.countDown());
 		assertThat(latchAll.await(WAIT_TIME, TimeUnit.SECONDS)).isFalse();
-		assertThat(latchType.getCount()).isGreaterThan(0L);
+		assertThat(latchType.getCount()).isPositive();
 		assertThat(p).isNotDone();
 		String value = new String("value");
 		d.resolve(value);
 		assertThat(latchAll.await(WAIT_TIME, TimeUnit.SECONDS)).isFalse();
-		assertThat(latchType.getCount()).isGreaterThan(0L);
+		assertThat(latchType.getCount()).isPositive();
 		assertThat(p).hasSameValue(value);
 	}
 
@@ -2339,7 +2314,7 @@ public class PromiseTest {
 		});
 
 		assertThat(latchAll.await(WAIT_TIME, TimeUnit.SECONDS)).isFalse();
-		assertThat(latchType.getCount()).isGreaterThan(0L);
+		assertThat(latchType.getCount()).isPositive();
 		assertThat(p).isNotDone();
 		d.fail(failure);
 		assertThat(latchAll.await(WAIT_TIME, TimeUnit.SECONDS)).isTrue();
@@ -2365,11 +2340,11 @@ public class PromiseTest {
 				});
 
 		assertThat(latchAll.await(WAIT_TIME, TimeUnit.SECONDS)).isFalse();
-		assertThat(latchType.getCount()).isGreaterThan(0L);
+		assertThat(latchType.getCount()).isPositive();
 		assertThat(p).isNotDone();
 		d.fail(failure);
 		assertThat(latchAll.await(WAIT_TIME, TimeUnit.SECONDS)).isTrue();
-		assertThat(latchType.getCount()).isGreaterThan(0L);
+		assertThat(latchType.getCount()).isPositive();
 		assertThat(p).hasFailedWithThrowableThat().isSameAs(failure);
 		assertThat(catchThrowableOfType(() -> p.getValue(),
 				InvocationTargetException.class).getCause()).isSameAs(failure);
@@ -2380,29 +2355,25 @@ public class PromiseTest {
 	public void testOnResolveNull1() throws Exception {
 		Deferred<String> d1 = factory.deferred();
 		Promise<String> p1 = d1.getPromise();
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.onResolve((Runnable) null));
+		assertThatThrownBy(() -> p1.onResolve((Runnable) null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
 	public void testOnResolveNull2() throws Exception {
 		String value1 = new String("value");
 		Promise<String> p1 = factory.resolved(value1);
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.onResolve((Runnable) null));
+		assertThatThrownBy(() -> p1.onResolve((Runnable) null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
 	public void testOnSuccessNull() throws Exception {
 		String value1 = new String("value");
 		Promise<String> p1 = factory.resolved(value1);
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.onSuccess((Consumer<String>) null));
+		assertThatThrownBy(() -> p1.onSuccess((Consumer<String>) null)).isInstanceOf(NullPointerException.class);
 
 		Error failure2 = new Error("fail2");
 		Promise<String> p2 = factory.failed(failure2);
-		assertThatNullPointerException()
-				.isThrownBy(() -> p2.onSuccess((Consumer<String>) null));
+		assertThatThrownBy(() -> p2.onSuccess((Consumer<String>) null)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -2413,21 +2384,16 @@ public class PromiseTest {
 		};
 		Class<Throwable> classNull = null;
 		Promise<String> p1 = factory.resolved(value1);
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.onFailure(consumerNull));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p1.onFailure(consumerEmpty, classNull));
-		assertThatNullPointerException().isThrownBy(
-				() -> p1.onFailure(consumerNull, TimeoutException.class));
+		assertThatThrownBy(() -> p1.onFailure(consumerNull)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p1.onFailure(consumerEmpty, classNull)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p1.onFailure(consumerNull, TimeoutException.class)).isInstanceOf(NullPointerException.class);
 
 		Error failure2 = new Error("fail2");
 		Promise<String> p2 = factory.failed(failure2);
-		assertThatNullPointerException()
-				.isThrownBy(() -> p2.onFailure(consumerNull));
-		assertThatNullPointerException()
-				.isThrownBy(() -> p2.onFailure(consumerEmpty, classNull));
-		assertThatNullPointerException().isThrownBy(() -> p2
-				.onFailure(consumerNull, TimeoutException.class));
+		assertThatThrownBy(() -> p2.onFailure(consumerNull)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p2.onFailure(consumerEmpty, classNull)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() -> p2
+				.onFailure(consumerNull, TimeoutException.class)).isInstanceOf(NullPointerException.class);
 	}
 
 	@Test
@@ -2562,8 +2528,7 @@ public class PromiseTest {
 	public void foreign_promise_success() throws Exception {
 		Integer value = Integer.valueOf(42);
 		Promise<Integer> p0 = factory.resolved(value);
-		@SuppressWarnings("unchecked")
-		Promise<Integer> p1 = MockFactory.newMock(Promise.class, p0);
+		Promise<Integer> p1 = foreignPromise(p0);
 		assertThat(p1).isInstanceOf(Proxy.class);
 		Promise<Integer> p2 = factory.resolvedWith(p1);
 		assertThat(p2).resolvesWithin(WAIT_TIME, TimeUnit.SECONDS)
@@ -2574,8 +2539,7 @@ public class PromiseTest {
 	public void foreign_promise_failure() throws Exception {
 		Throwable failure = new RuntimeException();
 		Promise<Integer> p0 = factory.failed(failure);
-		@SuppressWarnings("unchecked")
-		Promise<Integer> p1 = MockFactory.newMock(Promise.class, p0);
+		Promise<Integer> p1 = foreignPromise(p0);
 		assertThat(p1).isInstanceOf(Proxy.class);
 		Promise<Integer> p2 = factory.resolvedWith(p1);
 		assertThat(p2).resolvesWithin(WAIT_TIME, TimeUnit.SECONDS)
@@ -2583,4 +2547,25 @@ public class PromiseTest {
 				.isSameAs(failure);
 	}
 
+	/**
+	 * A Promise not made by the factory: a {@link Proxy} that delegates every
+	 * call to the given promise and returns itself where the delegate returns
+	 * itself. (What test.support's MockFactory.newMock did for this test.)
+	 */
+	@SuppressWarnings("unchecked")
+	private static <T> Promise<T> foreignPromise(Promise<T> delegate) {
+		InvocationHandler handler = (proxy, method, args) -> {
+			try {
+				Object result = method.invoke(delegate, args);
+				return (result == delegate) ? proxy : result;
+			} catch (InvocationTargetException e) {
+				Throwable cause = e.getCause();
+				throw (cause != null) ? cause : e;
+			}
+		};
+		return (Promise<T>) Proxy.newProxyInstance(
+				PromiseTest.class.getClassLoader(), new Class< ? >[] {
+						Promise.class
+				}, handler);
+	}
 }
