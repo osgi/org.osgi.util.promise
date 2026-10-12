@@ -50,7 +50,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import org.assertj.core.api.Assertions;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.assertj.core.api.ListAssert;
 import org.junit.jupiter.api.AfterEach;
@@ -208,7 +207,7 @@ public class PromiseTest {
 		assertThat(p2).isDone();
 		assertThat(p).hasSameValue(value);
 		assertThat(p2).isSuccessful();
-		Assertions.assertThat(valueOf(result.get())).isEqualTo(value);
+		assertThat(Integer.valueOf(result.get())).isSameAs(value);
 	}
 
 	@Test
